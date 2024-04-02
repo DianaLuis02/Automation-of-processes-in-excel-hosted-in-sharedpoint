@@ -1,7 +1,7 @@
 <h1 align="center">Hi there! 👋 I'm Diana Luis</h1>
-<h3 align="center">Data Scientist | Power BI Enthusiast | Azure DevOps Advocate</h3>
+<h3 align="center">Software Engineer | Power BI Enthusiast | Azure DevOps Advocate</h3>
 
-- 💬 Let's talk about **Exploratory Analysis, Graphics Production, Data Normalization and Balancing, Customer Segmentation, Supervised and Unsupervised Algorithm Development, Regression, and Classification Models.**
+- 💬 Let's talk about **Web Development, API Integration, Database Management, DevOps Practices, and Software Engineering.**
 
 - 📫 Reach me at **dianaquinteroluis@gmail.com**
 
