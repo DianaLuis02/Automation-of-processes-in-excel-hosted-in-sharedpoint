@@ -1,0 +1,491 @@
+import os
+import io
+from office365.runtime.auth.client_credential import ClientCredential
+from office365.sharepoint.client_context import ClientContext
+from office365.sharepoint.files.file import File
+import pandas as pd
+from datetime import datetime, date
+import numpy as np
+from numpy import busday_count
+import os
+from dotenv import load_dotenv
+import win32com.client as win32
+
+
+load_dotenv()
+
+
+SITE_URL_I = os.getenv('SITE_URL_I')
+CLIENT_ID = os.getenv('CLIENT_ID')
+CLIENT_SECRET = os.getenv('CLIENT_SECRET')
+NEWS = os.getenv('NEWS')
+NEWS_SHEET = os.getenv('NEWS_SHEET')
+UNREPORTED_NEWS = os.getenv('UNREPORTED_NEWS')
+UNREPORTED_NEWS_SHEET = os.getenv('UNREPORTED_NEWS_SHEET')
+UNREPORTED_NEWS_II = os.getenv("UNREPORTED_NEWS_II")
+UNREPORTED_NEWS_II_SHEET = os.getenv("UNREPORTED_NEWS_II_SHEET")
+SITE_URL_II = os.getenv("SITE_URL_II")
+CLIENT_ID_II = os.getenv("CLIENT_ID_II")
+CLIENT_SECRET_II = os.getenv("CLIENT_SECRET_II")
+UNREPORTED_NEWS_III= os.getenv("UNREPORTED_NEWS_III")
+UNREPORTED_NEWS_III_SHEET= os.getenv("UNREPORTED_NEWS_III_SHEET")
+BD_STAFF= os.getenv("BD_STAFF")
+BD_STAFF_SHEET= os.getenv("BD_STAFF_SHEET")
+SITE_URL_III = os.getenv("SITE_URL_III")
+CLIENT_ID_III = os.getenv("CLIENT_ID_III")
+CLIENT_SECRET_III= os.getenv("CLIENT_SECRET_III")
+DF_REGIONS_NEWS= os.getenv("DF_REGIONS_NEWS")
+REGIONS_NEWS_SHEET= os.getenv("REGIONS_NEWS_SHEET")
+DF_LICENSE_NEWS = os.getenv("DF_LICENSE_NEWS")
+LICENSE_SHEET = os.getenv("LICENSE_SHEET")
+
+
+print("Executing code\nGenerating Late News Report...")
+
+def download_report(file_url, sheet_name):
+    site_url = SITE_URL_III
+    credentials = ClientCredential(CLIENT_ID_III, CLIENT_SECRET_III)
+
+    ctx = ClientContext(site_url).with_credentials(credentials)
+
+    response = File.open_binary(ctx, file_url)
+    bytes_file_obj = io.BytesIO()
+    bytes_file_obj.write(response.content)
+    bytes_file_obj.seek(0)  
+    df = pd.read_excel(bytes_file_obj, sheet_name=sheet_name, engine='openpyxl')
+    print(df.head())
+
+    print(f"Your file is downloaded here: {os.path.abspath(file_url)}")
+
+    return df
+df_RC = download_report(DF_REGIONS_NEWS,REGIONS_NEWS_SHEET)
+df_license = download_report(DF_LICENSE_NEWS, LICENSE_SHEET)
+
+
+def download_report_one(file_url, sheet_name):
+    site_url = SITE_URL_I
+    credentials = ClientCredential(CLIENT_ID, CLIENT_SECRET)
+
+    ctx = ClientContext(site_url).with_credentials(credentials)
+
+    response = File.open_binary(ctx, file_url)
+    bytes_file_obj = io.BytesIO()
+    bytes_file_obj.write(response.content)
+    bytes_file_obj.seek(0)  
+
+    df = pd.read_excel(bytes_file_obj, sheet_name=sheet_name, engine='openpyxl')
+    print(df.head())
+
+    print(f"Your file is downloaded here: {os.path.abspath(file_url)}")
+
+    return df
+
+def download_report_two(file_url, sheet_name):
+    site_url = SITE_URL_II
+    credentials = ClientCredential(CLIENT_ID_II, CLIENT_SECRET_II)
+
+    ctx = ClientContext(site_url).with_credentials(credentials)
+
+    response = File.open_binary(ctx, file_url)
+    bytes_file_obj = io.BytesIO()
+    bytes_file_obj.write(response.content)
+    bytes_file_obj.seek(0)  
+    df = pd.read_excel(bytes_file_obj, sheet_name=sheet_name)
+    print(df.head())
+
+    print(f"Your file is downloaded here: {os.path.abspath(file_url)}")
+
+    return df
+
+def calculate_difference_working_days(star_date, end_date):
+    star_date = pd.to_datetime(star_date)
+    end_date = pd.to_datetime(end_date)
+
+    if end_date.dayofweek == 5: 
+        end_date = end_date - pd.DateOffset(days=1)
+    elif end_date.dayofweek == 6:  
+        end_date = end_date - pd.DateOffset(days=2)
+
+    start_date = np.datetime64(start_date, 'D')
+    end_date = np.datetime64(end_date, 'D')
+    
+    work_days = np.busday_count(start_date, end_date)
+    
+    return max(0, work_days)
+
+def calculate_difference(start_date, end_date):
+    if pd.isnull(start_date) or pd.isnull(end_date):
+        return 0
+    start_date = pd.to_datetime(start_date)
+    end_date = pd.to_datetime(end_date)
+
+    if end_date.dayofweek == 5:  
+        end_date = end_date - pd.DateOffset(days=1)
+    elif end_date.dayofweek == 6:  
+        end_date = end_date - pd.DateOffset(days=2)
+
+    
+    start_date = np.datetime64(start_date, 'D')
+    end_date = np.datetime64(end_date, 'D')
+    
+    
+    work_days = np.busday_count(start_date, end_date)
+    
+    return work_days
+
+def verify_conditions(BIIACODI):
+    if codig.startswith('BIIA') and len(BIIAID) == 8 and BIIACODI[4].isalpha() and BIIACODI[5:].isdigit() and BIIACODI[5:] != '000':
+        return 'ok'
+    else:
+        return 'Fails'
+
+def anomaly_type(row):
+    if row["conditionBIIACODI"] == "Fails":
+        return "misreported"
+    elif row["Days late in reporting"] >= 2:
+        return "News reported late"
+    else:
+        return""
+
+def anomaly_type_2(row):
+    if row["Days late in reporting"] >= 2:
+        return "News reported late"
+    else:
+        return""
+
+def anomaly_type_3(row):
+     if row['Hours'] < 7.5 and row['classdescription'] != 'PAID PER VOTE':
+        return 'Misreported news'
+     elif row["Authorized State"] == 2 or row["Authorized State"] == "N":
+        return "Misreported news"
+     elif row["Vacation Approved late"] <= 0 and row['classdescription'] == 'VACATION':
+        return "Vacation approved Late"
+     elif row["Days late in reporting "] >= 2:
+        return "News reported late"
+     else:
+        return""
+
+def send_alert_mail(df_filtered):
+    result = ((filtereddf['New Type'] == 'Lost Employee') & (filtereddf['Company'] == 'Company'))
+
+    row_meets_condition = df_filtered[result]
+
+    email_body = ""
+
+    if not row_meets_condition.empty:
+        email_body += """It's a pleasure to greet you.<br><br>
+        condition specification...<br><br><br>"""
+
+        email_body += str(row_meets_condition)
+
+        email_body += """<br><br><table cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+        <tr>
+        <td>
+        <img src="Add your company logo" alt="Company Logo" width="100" style="display: block;"/>
+        </td>
+        <td style="padding-left: 20px;">
+        <h2 style="margin: 0;">Add your name</h2>
+        <p style="margin: 0;">Add your departament</p>
+        <p style="margin: 0;">M:Add your mail</p>
+        <p style="margin: 0;">Companymail.com | Apply Now | Facebook | LinkedIn | Instagram | Whatsapp</p>
+        </td>
+        </tr>
+        </table>
+        """
+    else:
+        email_body += """
+        It's a pleasure to greet you..<br> No automatic alert detected...<br>attach...<br>.<br><br>Greetings.<br><br><br>
+        <table cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+        <tr>
+        <td>
+        <img src="Add your company logo" alt="Company Logo" width="100" style="display: block;"/>
+        </td>
+        <td style="padding-left: 20px;">
+        <h2 style="margin: 0;">Add your name</h2>
+        <p style="margin: 0;">Add your departament</p>
+        <p style="margin: 0;">M:Add your mail</p>
+        <p style="margin: 0;">Companymail.com | Apply Now | Facebook | LinkedIn | Instagram | Whatsapp</p>
+        </td>
+        </tr>
+        </table>
+        """
+
+
+    
+    outlook = win32.Dispatch('Outlook.Application')
+    message = outlook.CreateItem(0)
+    message.Subject = 'Report'
+    message.HTMLBody = email_body
+
+    recipient = 'recipient email'
+    message.To = recipient
+
+    attachment_file = 'UnreportedNews.xlsx'
+    attachment = os.path.abspath(attachment_file)
+    message.Attachments.Add(attachment)
+    message.Send()
+
+    print("Alert email sent.")
+    
+
+    return result
+
+df_NEWS = download_report_one(NEWS, NEWS_SHEET)
+DF_UNREPORTED_NEWS = download_report_one(UNREPORTED_NEWS, UNREPORTED_NEWS_SHEET)
+df_UNREPORTED_NEWS_II = download_report_one(UNREPORTED_NEWS_II, UNREPORTED_NEWS_II_SHEET)    
+df_REPORTED_NEWS_III = download_report_two(UNREPORTED_NEWS_III, UNREPORTED_NEWS_III_SHEET)
+df_BD_STAFF = download_report_two(BD_STAFF, BD_STAFF_SHEET)
+
+
+df_BD_STAFF = df_BD_STAFF[df_BD_STAFF['Status'] == 'ACTIVE']
+df_BD_STAFF["BIIACODI"] = df_BD_STAFF['BIIACODI'].str.strip()
+
+bd_staff_supervisor_mail = df_BD_STAFF[["BIIACODI","EMAIL" ]]
+bd_staff_supervisor_mail = bd_staff_supervisor_mail.rename(columns={"BIIACODI":"BIIACODISupervisor","CORPORATE_EMAIL":"Supervisor_mail"})
+
+bd_staff_2 = df_BD_STAFF[["BIIACODI", "Supervisor", "Director","NAMES"]]
+bd_staff_2 = bd_staff_2.rename(columns={"BIIACODI":"BIIACODI","NAMES":"NAMEI"})
+
+bd_staff_3 = df_BD_STAFF[["BIIACODI", "FULL_NAME"]]
+bd_staff_3 = bd_staff_3.rename(columns={"BIIACODI":"BIIACODI"})
+
+bd_staff_4 = df_BD_STAFF[["BIIACODI", "FULL_NAME"]]
+bd_staff_4 =  bd_staff_4.rename(columns={"BIIACODI":"BIIACODI", "FULL_NAME":"NAME"})
+
+bd_staff_5 = df_BD_STAFF[["BIIACODI","NAMES","FULL_NAME","EMAIL" ]]
+bd_staff_5 = bd_staff_5.rename(columns={"BIIACODI":"SupervisorI","NAMES": "SupervisorII","NAME":"Name","EMAIL":"mail"})
+
+bd_staff_6 = df_BD_STAFF[["BIIACODI","NAMES","FULL_NAME"]]
+bd_staff_6 = bd_staff_6.rename(columns={"BIIACODI":"DirectorI","NAMES":"Director","NAME":"Name"})
+
+bd_staff_7 = df_BD_STAFF[["BIIACODI","NAME","Company","Department","SubDepartment","Position" ]]
+bd_staff_7 = bd_staff_7.rename(columns={"BIIACODI":"","NAME":"NAMEI","Position":"PositionI"})
+
+DF_NEWS['Time'] = DF_NEWS['Time'].dt.date
+UNREPORTED_NEWS['Date'] = UNREPORTED_NEWS['Date'].dt.date
+
+start_date_str = input("Enter the start date File (YYYY-MM-DD): ")
+end_date_str = input("Enter the end date File (YYYY-MM-DD):")
+
+try:
+    star_date = datetime.strptime(star_date_str, '%Y-%m-%d').date()
+    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
+    print("Initial date in datetime format:", star_date)
+    print("End date in datetime format:", end_date)
+
+except ValueError:
+    print("Error: Make sure you enter dates in the correct format (YYYY-MM-DD).")
+
+DF_NEWS_FILTER = DF_NEWS[(DF_NEWS['Time'] >= star_date) & (DF_NEWS['Time'] <= end_date)]
+
+
+UNREPORTED_NEWS.drop(index=UNREPORTED_NEWS.index, inplace=True)
+UNREPORTED_NEWS = pd.DataFrame(columns=UNREPORTED_NEWS.columns)
+
+
+DF_NEWS_FILTER_II= DF_NEWS_FILTER[["Time", "BIIAID", "Name2", "Novedad","Day","Date", "Comment", "Lead","Director","BIIAID_Supervisor","BIIAID_Director"]]
+DF_NEWS_FILTER_II.rename(columns={"Time":"Date","BIIAID":"BIIAID","Name2":"Name","NewsNeW":"News","Day":"Colum1","Datenow":"Date_1"}, inplace=True)
+
+
+UNREPORTED_NEWS_TRANSFORM = pd.concat([DF_UNREPORTED_NEWS_NOVEDADES, DF_NEWS_FILTER_II], axis=0,ignore_index=True)
+
+UNREPORTED_NEWS_TRANSFORM["DIFFERENCE"] = UNREPORTED_NEWS_TRANSFORM.apply(lambda row: calculate_difference_working_days(row['DATE_1'], row['DATE_2']), axis=1)
+
+UNREPORTED_NEWS_TRANSFORM["BIIAID"] = UNREPORTED_NEWS_TRANSFORM['BIIAID'].str.strip()
+UNREPORTED_NEWS_TRANSFORM["BIIAID_Supervisor"] = UNREPORTED_NEWS_TRANSFORM['BIIAID_Supervisor'].str.strip()
+UNREPORTED_NEWS_TRANSFORM["BIIAID_Director"] = UNREPORTED_NEWS_TRANSFORM['BIIAID_Director'].str.strip()
+
+UNREPORTED_NEWS_TRANSFORM["BIIAID"] = UNREPORTED_NEWS_TRANSFORM['BIIAID'].str.upper()
+UNREPORTED_NEWS_TRANSFORM["BIIAID_Supervisor"] = UNREPORTED_NEWS_TRANSFORM['BIIAID_Supervisor'].str.upper()
+UNREPORTED_NEWS_TRANSFORM["BIIAID_Director"] = UNREPORTED_NEWS_TRANSFORM['BIIAID_Director'].str.upper()
+
+UNREPORTED_NEWS_TRANSFORM['BIIAID'] = UNREPORTED_NEWS_TRANSFORM['BIIAID'].astype(str)
+
+UNREPORTED_NEWS_TRANSFORM['conditionBIIAID'] =   UNREPORTED_NEWS_TRANSFORM['BIIAID'].apply(verify_conditions)
+
+df = UNREPORTED_NEWS_TRANSFORM
+Filter = (df['DIFFERENCE'] >= 2) |  (df['conditionBIIAID'] == 'FAILS')
+df = df.loc[Filter]
+
+df.rename(columns={"Fecha":"Time","BIIAID":"BIIA-ID","Name":"NameI","NEWS":"Type of news","Date_1":"Date_2","lEAD":"Lead", "BIIAID_Director":"BIIAID Director", "BIIAID_Supervisor":"BIIAID Supervisor", "DIFFERENCE":"days_late"}, inplace=True)
+
+df['Type of anomaly'] = df.apply(tipo_de_anomalia, axis=1)
+
+df= df[["Time","Director", "Supervisor","BIIA-ID", "Full Name", "Type of news", "Date_2","Type of anomaly", "BIIAIDSupervisor","BIIAID Director","days_late"]]
+
+df_REPORTED_NEWS_III.drop(index=df_REPORTED_NEWS_III.index, inplace=True)
+df_REPORTED_NEWS_III = pd.DataFrame(columns=df_REPORTED_NEWS_III.columns)
+
+df_REPORTED_NEWS_III_II = pd.concat([df_REPORTED_NEWS_III, df], axis=0,ignore_index=True)
+
+DF_UNREPORTED_NEWS['Impacted closure'] = DF_UNREPORTED_NEWS['Impacted closure'].dt.date
+
+
+star_date_str = input("Enter the initial date Archive News not reported (YYYY-MM-DD):")
+end_date_str = input("Enter the end date Archive News not reported (YYYY-MM-DD):")
+
+try:
+    star_date = datetime.strptime(star_date_str, '%Y-%m-%d').date()
+    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
+    print("Initial date in datetime format:", star_date)
+    print("End date in datetime format:", end_date)
+
+except ValueError:
+    print("Error: Make sure you enter dates in the correct format (YYYY-MM-DD).")
+
+DF_UNREPORTED_NEWS_FILTER = DF_UNREPORTED_NEWS[(DF_UNREPORTED_NEWS['Impacted closure'] >= star_date) & (DF_UNREPORTED_NEWS['Impacted closure'] <= end_date)]
+
+Filter_empty_news = DF_UNREPORTED_NEWS_FILTER['NEWS'].isnull() 
+DF_UNREPORTED_NEWS_FILTER = DF_UNREPORTED_NEWS_FILTER[Filter_empty_news]
+
+DF_UNREPORTED_NEWS_FILTER['Type of anomaly'] = "Unreported news"
+
+DF_UNREPORTED_NEWS_FILTER.rename(columns={"Impacted closure":"Time","Name":"Name1","Motion":"Type of news","Date":"Date_2"}, inplace=True)
+DF_UNREPORTED_NEWS_FILTER= DF_UNREPORTED_NEWS_FILTER[["Time","BIIA-ID", "Name1", "Date_2","Type of anomaly","Company","Type of news"]]
+
+DF_UNREPORTED_NEWS_FILTER["BIIA-ID"] = DF_UNREPORTED_NEWS_FILTER["BIIA-ID"].str.strip()
+
+News_not_reposted = pd.merge(DF_UNREPORTED_NEWS_FILTER, bd_staff_2, left_on=["BIIA-ID"], right_on=["BIIA-ID"], how='left')
+
+News_not_reposted = pd.merge(News_not_reposted, bd_staff_3, left_on=["Supervisor"], right_on=["NAME"], how='left')
+News_not_reposted = pd.merge(News_not_reposted, bd_staff_4, left_on=["Director"], right_on=["BIIAID"], how='left')
+
+df_REPORTED_NEWS_III_III = pd.concat([df_REPORTED_NEWS_III_II,News_not_reposted], axis=0,ignore_index=True)
+
+merged_df = pd.merge(df_REPORTED_NEWS_III_III, bd_staff_5, on=['BIIAIDSupervisor'], how='left', suffixes=('x', ''))
+merged_df2 = pd.merge(merged_df, bd_staff_6, on=['BIIAID Director'], how='left', suffixes=('x', ''))
+
+df_license_2 = df_license.dropna(subset=['generation date'])
+df_license_2['generation date'] =  pd.to_datetime(df_license_2['generation date']).dt.date
+
+star_date_str = input("Enter the initial date License File (YYYY-MM-DD): ")
+end_date_str = input("Enter the end date License File (YYYY-MM-DD): ")
+
+try:
+    star_date = datetime.strptime(star_date_str, '%Y-%m-%d').date()
+    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
+    print("Initial date in datetime format:", star_date)
+    print("End date in datetime format:", end_date)
+
+except ValueError:
+    print("Error: Make sure you enter dates in the correct format (YYYY-MM-DD).")
+
+df_license_3 = df_license_2[(df_license_2['Date'] >= star_date) & (df_license_2['Date'] <= end_date)]
+
+Filter = df_license_3['Approved Status'].isin(['1', 'A'])
+df_license_4 = df_license_3[Filter]
+
+df_license_4["days_late"] = df_license_4.apply(lambda row: calculate_difference(row['end_date'], row['Date']), axis=1)
+df_license_4["Late Approved"] = df_license_4.apply(lambda row: calculate_difference(row['end_date'], row['Date']), axis=1)
+df_license_4["Vacation"] = df_license_4.apply(lambda row: calculate_difference(row['approved_date'], row['exit_date']), axis=1)
+
+df_license_4['Type of anomaly'] = df_license_4.apply(anomaly_type_3, axis=1)
+
+df_license_4["BIIAID Supervisor"] = df_license_4['BIIAID Supervisor'].str.strip()
+df_license_4["Employee"] = df_license_4['Employee'].str.strip()
+
+df_LICENSE = pd.merge(df_license_4, bd_staff_supervisor_mail, left_on=["BIIAID Supervisor"], right_on=["BIIAIDSupervisor"], how='left')
+
+mapping = {
+      'INC GENERAL ILLNESS': 'Disability',
+      'FLEXDATA': 'FlexDATA',
+      'UNPAID LEAVE': 'Unpaid leave',
+      'VACATION': 'Vacation',
+      'PAID LEAVE': 'Paid leave',
+      'PATERNITY': 'Paid leave',
+      'FAMILY DAY': 'Family Day',
+      'CALAMITY LEAVE': 'Paid leave',
+      'MOURNING LEAVE': 'Paid leave',
+      'MATERNITY': 'Paid leave',
+      'MARRIAGE LEAVE': 'Paid leave',
+      'LEARNING DISABILITY': 'Disability',
+      'UNEXCUSED ABSENCE': 'UNEXCUSED ABSENCE',
+      'WORK ACCIDENT': 'Work Accident',
+      'SUSPENSION DUE TO DISCIPL SANCTION': 'Suspension',
+      'PAID LEAVE FOR VOTING': 'Paid leave',
+      'SWORN VOTING PERMIT': 'Paid leave',
+      'Load Separation Request': 'Load Separation',
+      'Change of headquarters, city or 5 days remote': 'Headquarters Report',
+      'Change of work modality': 'Change of work modality',
+      'Transition entry': 'Account exit - Transition entry',
+      'Load Change': 'Load Change',
+      'Change of department': 'Change of department',
+      'Change of vice presidency': 'Change of vice presidency'
+}
+
+df_LICENSE['Descrip'] = df_LICENSE['Descrip'].replace(mapping)
+df_LICENSE["Director"]= df_LICENSE["NameDirector"]
+df_LICENSE["Supervisor"]= df_LICENSE["Name Supervisor"]
+df_LICENSE["Name"]= df_LICENSE["Name"]
+df_LICENSE['Comentarios'] = 'information'
+
+df_LICENSE = df_LICENSE.rename(columns={"Fecha Generacion":"Time","date_end":"Date_2","Employee":"BIIA-ID","Name":"NAME","Descrip":"Type of news",'BIIAID Director':"BIIAID_Director","NameDirector":"BIIAID_name","Supervisor":"SupervisorI",})
+
+df_LICENSE = df_LICENSE[df_LICENSE["Type of anomaly"]!= '']
+
+merged_df2= pd.concat([merged_df2, df_LICENSE], axis=0,ignore_index=True)
+
+df_RC = df_RC.dropna(subset=['Date Report News'])
+df_RC['Date Report News'] =  pd.to_datetime(df_RC['Date Report News']).dt.date
+
+star_date_str = input("Enter the initial date REGIONS NEWS Archive (YYYY-MM-DD):")
+end_date_str = input("Enter the end date of the REGIONS NEWS Archive (YYYY-MM-DD): ")
+
+try:
+    star_date = datetime.strptime(star_date_str, '%Y-%m-%d').date()
+    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
+    print("Initial date in datetime format:", star_date)
+    print("End date in datetime format:", end_date)
+
+except ValueError:
+    print("Error: Make sure you enter dates in the correct format (YYYY-MM-DD).")
+
+result_RC = df_RC[(df_RC['Date Report News'] >= star_date) & (df_RC['Date Report News'] <= end_date)]
+
+Filter_RC = result_RC['Reason Withdrawal'].isin(["Voluntary retirement", "Without just cause","Termination period termination","Practical termination and/or productive stage","Just cause"])
+
+DF_UNREPORTED_NEWS_FILTER_RC = resultado_RC[Filter_RC]
+
+DF_UNREPORTED_NEWS_FILTER_RC["days_late"] = DF_UNREPORTED_NEWS_FILTER_RC.apply(lambda row: calculate_difference(row['retirement date'], row['Date Report News']), axis=1)
+
+DF_UNREPORTED_NEWS_FILTER_RC['Type of anomaly'] = DF_UNREPORTED_NEWS_FILTER_RC.apply(anomaly_type_2, axis=1)
+
+mapping = {
+     'Voluntary retirement': 'Resignation',
+     'Without just cause': 'Dismissal',
+     'End of trial period': 'Dismissal',
+     'Practical completion and/or productive stage': 'Practice completion',
+     'Just cause': 'Dismissal'
+}
+
+DF_UNREPORTED_NEWS_FILTER_RC['Reason Withdrawal'] = DF_UNREPORTED_NEWS_FILTER_RC['Reason Withdrawal'].replace(mapeo)
+
+DF_UNREPORTED_NEWS_FILTER_RC["Director"]= DF_UNREPORTED_NEWS_FILTER_RC["DirectorI"]
+DF_UNREPORTED_NEWS_FILTER_RC["Supervisor"]= DF_UNREPORTED_NEWS_FILTER_RC["SupervisorI"]
+DF_UNREPORTED_NEWS_FILTER_RC["Name"]= DF_UNREPORTED_NEWS_FILTER_RC["Name"]
+DF_UNREPORTED_NEWS_FILTER_RC['Comments'] = 'Country'
+
+DF_UNREPORTED_NEWS_FILTER_RC = DF_UNREPORTED_NEWS_FILTER_RC.rename(columns={"Date Report News":"Time","Date":"Date_2","employees":"BIIA-ID","Name":"NAME","REASON":"Type of news",'BIIAIDDirector':"BIIAID_DirectorI","NAME_Director":"Name of Director","comment":"Comment news","NAME_Supervisor":"Name of supervisor","Email_S":"Email Supervisor","BIIAID Supervisor":"BIIAIDSupervisorI"})
+
+DF_UNREPORTED_NEWS_FILTER_RC = DF_UNREPORTED_NEWS_FILTER_RC[DF_UNREPORTED_NEWS_FILTER_RC["Type of anomaly"]!= '']
+
+merged_df2= pd.concat([merged_df2, DF_UNREPORTED_NEWS_FILTER_RC], axis=0,ignore_index=True)
+
+merged_df2["BIIA-ID"] = merged_df2['BIIA-ID'].str.strip()
+
+merged_df3 = pd.merge(merged_df2, bd_staff_7, on=['BIIA-ID'], how='left', suffixes=('x', ''))
+end= merged_df3[["Week","Time","BIIAID Director","Director","BIIAIDSupervisor","Supervisor","Mailsupervisor","BIIA-ID","NAME","Type of news","Date_2","Type of anomaly","days_late","Comment","Company","Department","SubDepartment"]]
+end['Time'] = pd.to_datetime(end['Time']).dt.date
+
+end.to_excel('File.xlsx', index=False)
+
+
+send_alert_mail(end)
+
+
+print("everything is ok...your alert mail was send")
+
