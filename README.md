@@ -3,6 +3,8 @@
 
 - 💬 Let's chat about **Data Analysis, Visualization with Power BI, Python Data Manipulation, and Machine Learning Basics.**
 
+- **The following project exemplifies the automation of Excel tasks hosted on SharePoint using Python functions. This automation is achieved by downloading Excel files from SharePoint sites specified in environment variables, using the office365 library for authentication and file manipulation. The code also makes use of the pandas library to parse the downloaded data and convert it into DataFrames for further processing. In addition, automatic emailing is implemented using the win32com library to notify about the generation of the late news report. This solution provides an efficient and automated way to manage and process SharePoint hosted data, which helps to improve productivity and reduce errors in repetitive analysis and reporting tasks.**
+
 - 📫 Reach me at **dianaquinteroluis@gmail.com**
 
 <h3 align="left">Connect with me:</h3>
