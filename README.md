@@ -1,4 +1,4 @@
-h1 align="center">Hi there! 👋 I'm Diana Luis</h1>
+<h1>align="center">Hi there! 👋 I'm Diana Luis</h1>
 <h3 align="center">Data Analyst | Python & Power BI Enthusiast</h3>
 
 - 💬 Let's chat about **Data Analysis, Visualization with Power BI, Python Data Manipulation, and Machine Learning Basics.**
