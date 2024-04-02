@@ -14,7 +14,6 @@ h1 align="center">Hi there! 👋 I'm Diana Luis</h1>
 <h3 align="left">Languages and Tools:</h3>
 <p align="left">
 <a href="https://powerbi.microsoft.com/" target="_blank" rel="noreferrer"><img src="https://www.vectorlogo.zone/logos/microsoft_powerbi/microsoft_powerbi-icon.svg" alt="powerbi" width="40" height="40"/></a>
-<a href="https://azure.microsoft.com/en-us/services/devops/" target="_blank" rel="noreferrer"><img src="https://www.vectorlogo.zone/logos/microsoft_azuredevops/microsoft_azuredevops-icon.svg" alt="azuredevops" width="40" height="40"/></a>
 <a href="https://flask.palletsprojects.com/" target="_blank" rel="noreferrer"><img src="https://www.vectorlogo.zone/logos/pocoo_flask/pocoo_flask-icon.svg" alt="flask" width="40" height="40"/></a>
 <a href="https://mariadb.org/" target="_blank" rel="noreferrer"><img src="https://www.vectorlogo.zone/logos/mariadb/mariadb-icon.svg" alt="mariadb" width="40" height="40"/></a>
 <a href="https://www.microsoft.com/en-us/sql-server" target="_blank" rel="noreferrer"><img src="https://www.svgrepo.com/show/303229/microsoft-sql-server-logo.svg" alt="mssql" width="40" height="40"/></a>
